@@ -1,0 +1,50 @@
+﻿::deep .add-button {
+    background-color: #26A69A !important;
+    color: white !important;
+    width: 100px;
+    height: 40px;
+    margin-left: 25px;
+}
+
+::deep .search-bar-version2 {
+    background-color: #B2DFDB;
+    border-radius: 30px;
+    width: 500px;
+    margin-left: 700px;
+    margin-bottom: 20px;
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+}
+
+::deep .search-bar {
+    margin-left: 25px;
+    margin-right: 25px;
+}
+
+::deep .header-table {
+    border-bottom: 1px solid #dddddd;
+    border-top: 1px solid #dddddd;
+}
+
+::deep .edit-mud-button {
+    padding: 5px;
+    background-color: #F5F5F5;
+    border: 1px solid #EEEEEE;
+    margin-right: 15px;
+}
+
+    ::deep .edit-mud-button:hover {
+        background-color: #EEEEEE;
+    }
+
+::deep .delete-mud-button {
+    background-color: red;
+    color: white;
+    padding: 5px;
+    border: 1px solid #D50000;
+}
+
+    ::deep .delete-mud-button:hover {
+        background-color: #D50000;
+    }

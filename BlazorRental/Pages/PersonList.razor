@@ -1,0 +1,157 @@
+﻿@page "/person"
+@using RentACar.DTOs;
+@using System.Net.Http.Json;
+@using System.Text.Json;
+@using static MudBlazor.CategoryTypes;
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+<h3>List of clients</h3>
+
+
+
+@if(Persons !=  null)
+{
+    <div>
+        <MudLayout>
+            <MudTable Items="@Persons" Hover="true" Filter="new Func<PersonCreateDto,bool>(FilterFunc1)">
+                <ToolBarContent>
+                    <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" @onclick="CreateNewPerson" Class="add-button">ADD</MudButton>
+                    <MudSpacer />
+                    <div class="search-bar-version2">
+                    <MudTextField @bind-Value="searchString1" Placeholder="Search a person" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="search-bar"></MudTextField>
+                    </div>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh Class="header-table">Name</MudTh>
+                    <MudTh Class="header-table">Gender</MudTh>
+                    <MudTh Class="header-table">DateOfBirth</MudTh>
+                    <MudTh Class="header-table">Phone</MudTh>
+                    <MudTh Class="header-table">Email</MudTh>
+                    <MudTh Class="header-table">Buttons</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name">@context.Name</MudTd>
+                    <MudTd DataLabel="GenderType">@context.GenderType</MudTd>
+                    <MudTd DataLabel="DateOfBirth">@context.DateOfBirth.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Phone">@context.PhoneNumber</MudTd>
+                    <MudTd DataLabel="Email">@context.Email</MudTd>
+                    <MudTd>
+                        <MudIconButton Class="edit-mud-button" Icon="@Icons.Material.Filled.Edit" aria-label="edit" @onclick="(() => UpdatePerson(context.Id))"></MudIconButton>
+                        <MudIconButton Class="delete-mud-button" Icon="@Icons.Material.Filled.Delete" aria-label="delete" @onclick="( async () => await OpenDialog(context.Id))"></MudIconButton>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        </MudLayout>
+    </div>
+}
+else
+{
+    <div>
+        <MudProgressCircular Style="height:70px;width:70px; margin-left: 700px; margin-top: 400px;" Indeterminate="true" />
+    </div>
+}
+
+@code {
+    private string searchString1 = "";
+
+    private List<PersonCreateDto> Persons { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        var response = await _httpClient.GetAsync("api/Person");
+        if (response.IsSuccessStatusCode)
+        {
+            var personJson = await response.Content.ReadAsStringAsync();
+            Persons = Newtonsoft.Json.JsonConvert.DeserializeObject<List<PersonCreateDto>>(personJson);
+
+            foreach (var person in Persons)
+            {
+                person.PhoneNumber = $"{person.Prefix} {person.Number}";
+            }
+        }
+    }
+
+    private async Task OpenDialog(int id)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("PersonId", id);
+
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraSmall,
+                DisableBackdropClick = true,
+                NoHeader = true,
+                CloseOnEscapeKey = true,
+            };
+        var result = await DialogService.Show<PersonList1DialogDelete>("Dialog", parameters, options).Result;
+
+        if (result != null && result.Data is bool confirmed && confirmed)
+        {
+            await DeletePerson(id);
+        }
+    }
+
+
+    async Task DeletePerson(int id)
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/")
+            };
+
+        try
+        {
+            var response = await _httpClient.DeleteAsync($"api/Person/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var deletedPerson = Persons.FirstOrDefault(person => person.Id == id);
+                if (deletedPerson != null)
+                {
+                    Persons.Remove(deletedPerson);
+                }
+            }
+            NavigationManager.NavigateTo("/person");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+
+    }
+
+    private bool FilterFunc1(PersonCreateDto person) => FilterFunc(person, searchString1);
+
+    private bool FilterFunc(PersonCreateDto person, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (person.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (person.Email.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if ($"{person.Name} {person.Email}".Contains(searchString))
+            return true;
+        return false;
+    }
+
+    void UpdatePerson(int id)
+    {
+        NavigationManager.NavigateTo($"person2/{id}");
+    }
+
+    void CreateNewPerson()
+    {
+        NavigationManager.NavigateTo("/person2");
+    }
+}

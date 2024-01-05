@@ -1,0 +1,92 @@
+﻿::deep.input-file-container {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 50px;
+}
+
+::deep.input-file-container label {
+    cursor: pointer;
+    border: 1px solid #ccc;
+    padding: 5px 15px;
+    background: lightgray;
+    border-radius: 5px;
+    font-weight: bold;
+    width: 200px;
+    height: 200px;
+    text-align: center;
+}
+
+::deep.input-file-container label:hover {
+        background: gray;
+}
+
+::deep.input-file-container input {
+    display: none;
+}
+
+::deep.image-custom {
+}
+
+::deep.brand-field {
+    margin-top: 30px;
+    width: 779px;
+}
+
+::deep.registrationNumber-field {
+    margin-top: 30px;
+    margin-left: 20px;
+    width: 779px;
+}
+
+::deep.horsepower-field {
+    margin-top: 30px;
+    width: 779px;
+}
+
+::deep.seats-field {
+    margin-top: 30px;
+    margin-left: 20px;
+    width: 779px;
+}
+
+::deep.transmission-field {
+    margin-top: 13px;
+    width: 779px;
+}
+
+::deep.gearbox-field {
+    margin-top: 13px;
+    width: 779px;
+    margin-left: 20px;
+}
+
+::deep.cartype-field {
+    margin-top: 30px;
+    width: 779px;
+}
+
+::deep.combustible-field {
+    margin-top: 30px;
+    width: 779px;
+    margin-left: 20px;
+}
+
+::deep.price-field {
+    margin-top: 30px;
+    margin-left: -12px;
+}
+
+::deep .back-mud-button {
+    margin-left: -12px;
+    background-color: #616161;
+    color: white;
+    height: 35px;
+}
+::deep .savecar-mud-button {
+    margin-left: 10px;
+    background-color: #26A69A;
+    color: white;
+    height:35px;
+}

@@ -1,0 +1,62 @@
+﻿@page "/rentallistdialogdelete"
+@inject IDialogService DialogService
+
+<MudDialog Class="custom-dialog">
+    <DialogContent>
+        <h4 class="custom-content">Are you sure you want to delete the rent?</h4>
+    </DialogContent>
+    <DialogActions>
+        <div class="custom-button-cancel">
+            <MudButton Class="custom-buttons" OnClick="Cancel">Cancel</MudButton>
+        </div>
+        <div class="custom-button-delete">
+            <MudButton Class="custom-buttons" OnClick="Submit">Delete</MudButton>
+        </div>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public int RentalId { get; set; }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}
+
+<style>
+    .custom-buttons {
+        font-size: 14px;
+        color: black;
+        border: none;
+        padding: 2px 4px;
+        cursor: pointer;
+        border-radius: 5px;
+        width: 190px;
+        height: 30px;
+        border: 2px solid #000;
+        border-radius: 5px;
+    }
+
+    .custom-button-delete {
+        border-radius: 5px;
+    }
+
+    .custom-button-cancel {
+        border-radius: 5px;
+    }
+
+    .custom-dialog {
+        position: fixed;
+        margin-top: 20px;
+        margin-right: 100px;
+        border-radius: 8px;
+        padding: 16px;
+    }
+</style>

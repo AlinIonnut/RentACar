@@ -1,0 +1,246 @@
+﻿@page "/car2"
+@page "/car2/{id:int}"
+@using System.Net.Http.Json
+@using System.Text.Json;
+@using System.Text;
+@using RentACar.DTOs;
+@using FluentValidation
+@using static MudBlazor.CategoryTypes;
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+@if(Id==0)
+{
+    <PageTitle>Create a new car</PageTitle>
+    <h3>Create a new car</h3>
+}
+else
+{
+    <PageTitle>Edit @car.Brand</PageTitle>
+    <h3>Edit @car.Brand</h3>
+}
+
+
+<MudForm @ref="@form" Model="@car" Validation="@(orderValidator.ValidateValue)" ValidationDelay="0">
+   <MudGrid>
+        <div class="brand-field">
+            <MudTextField @bind-Value="car.Brand" Label="Brand" Placeholder="Enter a car brand and a model"
+                          Variant="Variant.Outlined" For="@(() => car.Brand)" Immediate="true"></MudTextField>
+        </div>
+        <div class="registrationNumber-field">
+            <MudTextField @bind-Value="car.RegistrationNumber" Label="Registrantion Number" Placeholder="Enter the registration number" 
+            Variant="Variant.Outlined" For="@(() => car.RegistrationNumber)" Immediate="true"></MudTextField>
+        </div>
+   </MudGrid>
+
+    <MudGrid>
+         <div class="horsepower-field">
+            <MudNumericField @bind-Value="car.Power" Label="Power" Variant="Variant.Outlined" HelperText="Enter the horse power of the car" HelperTextOnFocus="true"
+                             Adornment="Adornment.End" AdornmentText="HP" MaxLength="3" For="@(() => car.Power)" Immediate="true"></MudNumericField>
+        </div>
+
+        <div class="seats-field">
+            <MudNumericField @bind-Value="car.Seats" Label="Seats" Variant="Variant.Outlined" HelperText="Enter the number of the car seats" HelperTextOnFocus="true"
+                             For="@(() => car.Seats)" Immediate="true"></MudNumericField>
+        </div>
+    </MudGrid>
+
+     <MudGrid>
+        <div class="transmission-field">
+            <MudSelect Label="Transmission Type" @bind-Value="car.TransmissionType" Variant="Variant.Outlined">
+                @foreach (TransmissionType type in Enum.GetValues(typeof(TransmissionType)))
+                {
+                    <MudSelectItem Value="type">@type.ToString()</MudSelectItem>
+                }
+            </MudSelect>
+       </div>
+        <div class="gearbox-field">
+            <MudSelect Label="Gearbox Type" @bind-Value="car.GearboxType" Variant="Variant.Outlined">
+                @foreach (GearboxType type in Enum.GetValues(typeof(GearboxType)))
+                {
+                    <MudSelectItem Value="type">@type.ToString()</MudSelectItem>
+                }
+            </MudSelect>
+       </div>
+     </MudGrid>
+     <MudGrid>
+        <div class="cartype-field">
+            <MudSelect Label="Car Type" @bind-Value="car.CarType" Variant="Variant.Outlined">
+                @foreach (CarType type in Enum.GetValues(typeof(CarType)))
+                {
+                    <MudSelectItem Value="type">@type.ToString()</MudSelectItem>
+                }
+            </MudSelect>
+         </div>
+        <div class="combustible-field">
+            <MudSelect Label="Combustible Type" @bind-Value="car.CombustibleType" Variant="Variant.Outlined">
+                @foreach (CombustibleType type in Enum.GetValues(typeof(CombustibleType)))
+                {
+                    <MudSelectItem Value="type">@type.ToString()</MudSelectItem>
+                }
+            </MudSelect>
+         </div>
+     </MudGrid>
+     <div class="price-field">
+        <MudTextField @bind-Value="car.Price" Label="Price" Variant="Variant.Outlined" HelperText="Enter the price of the car for one day" HelperTextOnFocus="true"
+                      Adornment="Adornment.Start" AdornmentText="LEI" MaxLength="4" For="@(() => car.Price)" Immediate="true"></MudTextField>
+     </div>
+    <MudGrid>
+        <div class="input-file-container">
+            <label for="fileInput" class="image-custom">Select Images</label>
+            <InputFile id="fileInput" OnChange="HandleFileChange"/>
+        </div>
+
+        @if (imageUrls != null && imageUrls.Any())
+        {
+            <div>
+                @foreach (var url in imageUrls)
+                {
+                        <MudImage src="@url" alt="Uploaded Image" Width="300" Height="200" Class="image-custom"/>
+                }
+            </div>
+        }
+    </MudGrid>
+</MudForm>
+    <div>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" Class="back-mud-button" @onclick="GoBack">Back</MudButton>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Save" Class="savecar-mud-button" @onclick="ValidateAndSubmit" Size="Size.Small">@btnText</MudButton>
+    </div>
+
+
+@code {
+    private MudForm form;
+
+    CarCreateDtoFluentValidator orderValidator = new CarCreateDtoFluentValidator();
+
+    private RentACar.DTOs.CarCreateDto car = new RentACar.DTOs.CarCreateDto();
+
+    private List<string> imageUrls = new List<string>();
+
+    [Parameter]
+    public int Id { get; set; }
+
+    string btnText = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+
+
+        if (Id == 0)
+        {
+            btnText = "Save new car";
+            car = new RentACar.DTOs.CarCreateDto();
+        }
+        else
+        {
+            btnText = "Update car";
+            var response = await _httpClient.GetAsync($"api/Car/{Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var carJson = await response.Content.ReadAsStringAsync();
+                car = JsonSerializer.Deserialize<RentACar.DTOs.CarCreateDto>(carJson);
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/car");
+            }
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        HttpResponseMessage response;
+
+        if (Id == 0)
+        {
+            response = await _httpClient.PostAsJsonAsync("api/Car", car);
+        }
+        else
+        {
+            response = await _httpClient.PutAsJsonAsync($"api/Car/{Id}", car);
+        }
+        if (response.IsSuccessStatusCode)
+        {
+            var cars = await response.Content.ReadFromJsonAsync<List<CarCreateDto>>();
+
+            NavigationManager.NavigateTo("/car");
+        }
+    }
+
+    void GoBack()
+    {
+        NavigationManager.NavigateTo("/car");
+    }
+
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        var newImageUrls = new List<string>();
+
+        foreach (var file in e.GetMultipleFiles())
+        {
+            using (var stream = file.OpenReadStream())
+            using (var memoryStream = new MemoryStream())
+            {
+                await stream.CopyToAsync(memoryStream);
+                car.Picture = memoryStream.ToArray();
+                string imageUrl = $"data:image/jpeg;base64,{Convert.ToBase64String(car.Picture)}";
+                newImageUrls.Add(imageUrl);
+            }
+        }
+        imageUrls.AddRange(newImageUrls);
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+        Snackbar.Add("Images uploaded!"); 
+    }
+
+    public class CarCreateDtoFluentValidator : AbstractValidator<CarCreateDto>
+    {
+        public CarCreateDtoFluentValidator()
+        {
+            RuleFor(x => x.Brand)
+            .NotEmpty()
+            .Length(1, 50);
+
+            RuleFor(x => x.RegistrationNumber)
+           .NotEmpty()
+           .Length(5, 8);
+
+            RuleFor(x => x.Power)
+            .GreaterThan(0);
+
+            RuleFor(x => x.Seats)
+            .GreaterThan(0);
+
+            RuleFor(x => x.Price)
+            .GreaterThan(0);
+        }
+
+
+        public Func<object, string, Task<IEnumerable<string>>> ValidateValue => async (car, propertyName) =>
+        {
+            var result = await ValidateAsync(ValidationContext<CarCreateDto>.CreateWithOptions((CarCreateDto)car , x => x.IncludeProperties(propertyName)));
+            if (result.IsValid)
+                return Array.Empty<string>();
+            return result.Errors.Select(e => e.ErrorMessage);
+        };
+    }
+
+    public async Task ValidateAndSubmit()
+    {
+        form.Validate();
+        if (form.IsValid)
+        {
+            HandleSubmit();
+        }
+    }
+}

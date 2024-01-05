@@ -1,0 +1,77 @@
+﻿::deep .header-table {
+    border-bottom: 1px solid #dddddd;
+    border-top: 1px solid #dddddd;
+    margin-top:20px;
+}
+
+::deep .paper {
+    background-color: #009688;
+    height: 350px;
+    width: 550px;
+    border-radius: 30px;
+    margin-top: 100px;
+    margin-left: -40px;
+}
+
+::deep .content {
+    font-size: 16px;
+    margin-left: 35px;
+    width: 480px
+}
+
+::deep .startDate {
+    margin-top: 60px;
+    width: 150px;
+}
+
+::deep .endDate {
+    margin-top: 60px;
+    margin-left: 10px;
+    width: 150px;
+}
+
+::deep .mud-theme-primary {
+    background-color: #009688 !important;
+}
+
+::deep .mud-picker-toolbar {
+    background-color: #009688 !important;
+}
+
+::deep .mud-button-outlined {
+    border: 1px solid #009688 !important;
+    color: #000000 !important;
+}
+
+:: deep. mud-input-control-input-container:active {
+    border: 1px solid #000000 !important;
+}
+
+::deep .mud-primary-text {
+    color: #009688 !important;
+}
+
+::deep .search-button {
+    font-size: 14px !important;
+    color: black;
+    width: 190px;
+    height: 50px;
+    border: 2px solid #FAFAFA;
+    margin-top: 70px;
+    margin-left: 140px;
+    background-color: #4DB6AC !important;
+}
+
+::deep .search-button:hover {
+    background-color: #E0F2F1;
+    color: black;
+    width: 190px;
+    height: 50px;
+    border: 2px solid #000000;
+    margin-top: 70px;
+    margin-left: 140px;
+}
+
+.table{
+    margin-top:20px;
+}

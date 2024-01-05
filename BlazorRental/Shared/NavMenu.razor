@@ -1,0 +1,66 @@
+﻿@inject NavigationManager NavigationManager
+
+<MudPaper Elevation="0" Class="paper">
+    <MudNavMenu Margin="Margin.Dense" Class="nav-custom">
+        <MudNavLink Href="/search" Icon="@Icons.Material.Filled.Search" Class="page-custom">Availability</MudNavLink>
+        <MudNavLink Href="/car" Class="page-custom" Icon="@Icons.Material.Filled.CarRepair">Cars</MudNavLink>
+        <MudNavLink Href="/person" Icon="@Icons.Material.Filled.Person" Class="page-custom">Clients</MudNavLink>
+        <MudNavLink Href="/rental" Icon="@Icons.Material.Filled.CarRental" Class="page-custom">Rentals</MudNavLink>
+    </MudNavMenu>
+
+</MudPaper>
+
+@code {
+}
+
+<style>
+    .paper{
+        margin-left:250px;
+    }
+
+    .nav-custom {
+        width: 250px;
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background-color: #26A69A;
+        color: white;
+    }
+
+    .nav-custom a:hover{
+        background-color: white !important;
+        color: #26A69A !important;
+        
+    }
+
+    .nav-custom a.active {
+         background-color: white !important;
+         color: #26A69A !important;
+    }
+
+    .page-custom{
+        font-family: 'Times New Roman', Times, serif;
+        font-size:16px;
+        font-weight: bold;
+        border-radius: 5px;
+        top: 90px;
+    }
+
+    .mud-nav-link .mud-icon-root{
+        color: white !important;
+        background-color: transparent;
+    }
+
+    .mud-nav-link .mud-icon-root a.active {
+        color: #26A69A !important;
+       background-color: transparent;
+    }
+
+    .mud-nav-link .mud-icon-root a:hover{
+       color: #26A69A !important;
+       background-color: transparent;
+     }
+
+
+</style>

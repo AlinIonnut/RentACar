@@ -1,0 +1,146 @@
+﻿@page "/rental"
+@using RentACar.DTOs;
+@using System.Net.Http.Json;
+@using System.Text.Json;
+@using static MudBlazor.CategoryTypes;
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+<h3>List of rentals</h3>
+
+@if (Rentals != null)
+{
+<div>
+        <MudLayout>
+            <MudTable Items="@Rentals" Hover="true" Filter="new Func<RentalCreateDto,bool>(FilterFunc1)">
+                <ToolBarContent>
+                    <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" @onclick="CreateNewRental" Class="add-button">ADD</MudButton>
+                    <MudSpacer />
+                    <div class="search-bar-version2">
+                    <MudTextField @bind-Value="searchString1" Placeholder="Search a rental" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="search-bar"></MudTextField>
+                    </div>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh Class="header-table">CarId</MudTh>
+                    <MudTh Class="header-table">PersonId</MudTh>
+                    <MudTh Class="header-table">StartDate</MudTh>
+                    <MudTh Class="header-table">EndDate</MudTh>
+                    <MudTh Class="header-table">PickUpTime</MudTh>
+                    <MudTh Class="header-table">DropOfTime</MudTh>
+                    <MudTh Class="header-table">PickUpLocation</MudTh>
+                    <MudTh Class="header-table">DropOfLocation</MudTh>
+                    <MudTh Class="header-table">TotalPrice</MudTh>
+                    <MudTh Class="header-table">Buttons</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="CarId">@context.CarId</MudTd>
+                    <MudTd DataLabel="PersonId">@context.PersonId</MudTd>
+                    <MudTd DataLabel="StartDate">@context.StartDate.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="EndDate">@context.EndDate.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="PickUpTime">@context.PickUpTime.ToString("hh\\:mm")</MudTd>
+                    <MudTd DataLabel="DropOfTime">@context.DropOfTime.ToString("hh\\:mm")</MudTd>
+                    <MudTd DataLabel="PickUpLocation">@context.PickUpLocation</MudTd>
+                    <MudTd DataLabel="DropOfLocation">@context.DropOfLocation</MudTd>
+                    <MudTd DataLabel="TotalPrice">@context.TotalPrice</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" aria-label="edit" @onclick="(() => UpdateRental(context.Id))" Class="edit-mud-button"></MudIconButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" aria-label="delete" @onclick="( async () => await OpenDialog(context.Id))" Class="delete-mud-button"></MudIconButton>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        </MudLayout>
+</div>
+}
+else
+{
+    <div>
+        <MudProgressCircular Style="height:70px;width:70px; margin-left: 700px; margin-top: 400px;" Indeterminate="true" />
+    </div>
+}
+
+@code {
+    private string searchString1 = "";
+
+    private List<RentalCreateDto> Rentals { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        var response = await _httpClient.GetAsync("api/Rental");
+        if (response.IsSuccessStatusCode)
+        {
+            var rentalJson = await response.Content.ReadAsStringAsync();
+            Rentals = Newtonsoft.Json.JsonConvert.DeserializeObject<List<RentalCreateDto>>(rentalJson);
+        }
+    }
+
+    private async Task OpenDialog(int id)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("RentalId", id);
+
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraSmall,
+                DisableBackdropClick = true,
+                NoHeader = true,
+                CloseOnEscapeKey = true,
+            };
+        var result = await DialogService.Show<RentList1DialogDelete>("Dialog", parameters, options).Result;
+
+        if (result != null && result.Data is bool confirmed && confirmed)
+        {
+            await DeleteRental(id);
+        }
+    }
+
+    async Task DeleteRental(int id)
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/")
+            };
+
+        var response = await _httpClient.DeleteAsync($"api/Rental/{id}");
+        if (response.IsSuccessStatusCode)
+        {
+            var deletedRental = Rentals.FirstOrDefault(rental => rental.Id == id);
+            if (deletedRental != null)
+            {
+                Rentals.Remove(deletedRental);
+            }
+        }
+        NavigationManager.NavigateTo("/rental");
+    }
+
+    private bool FilterFunc1(RentalCreateDto rental) => FilterFunc(rental, searchString1);
+
+    private bool FilterFunc(RentalCreateDto rental, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (rental.DropOfLocation.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if ($"{rental.DropOfLocation}".Contains(searchString))
+            return true;
+        return false;
+    }
+
+    void UpdateRental(int id)
+    {
+        NavigationManager.NavigateTo($"rental2/{id}");
+    }
+
+    void CreateNewRental()
+    {
+        NavigationManager.NavigateTo("/rental2");
+    }
+}

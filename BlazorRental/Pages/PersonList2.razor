@@ -1,0 +1,208 @@
+﻿@page "/person2"
+@page "/person2/{id:int}"
+@using System.Net.Http.Json
+@using System.Text.Json;
+@using System.Text;
+@using RentACar.DTOs;
+@using System.Text.RegularExpressions;
+@using FluentValidation
+@using Microsoft.AspNetCore.Components
+@using MudBlazor.Extensions
+@using static MudBlazor.CategoryTypes;
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+
+@if (Id == 0)
+{
+    <PageTitle>Create a new person</PageTitle>
+    <h3>Create a new person</h3>
+}
+else
+{
+    <PageTitle>Edit @person.Name</PageTitle>
+    <h3>Edit @person.Name</h3>
+}
+
+<MudForm Model="@person" @ref="@form" Validation="@(orderValidator.ValidateValue)" ValidationDelay="0">
+    <div class="name-field">
+        <MudTextField @bind-Value="person.Name" Label="Name" Variant="Variant.Outlined" Placeholder="Enter the name of the person"
+        For="@(() => person.Name)" Immediate="true" ></MudTextField>
+    </div>
+    <MudGrid>
+        <div class="gender-field">
+            <MudSelect Label="Gender Type" @bind-Value="person.GenderType" Variant="Variant.Outlined">
+                @foreach (GenderType type in Enum.GetValues(typeof(GenderType)))
+                {
+                    <MudSelectItem Value="type">@type.ToString()</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <div class="dateofbirth-field">
+            <MudDatePicker @bind-Date="dateOfBirth" Label="Date of birth" Variant="Variant.Outlined" PickerVariant="PickerVariant.Dialog" Placeholder="Enter the person date birth"
+             OpenTo="OpenTo.Year" DateFormat="dd/MM/yyyy"></MudDatePicker>
+        </div>
+    </MudGrid>
+    <MudGrid>
+        <div class="prefix-field">
+            @if(phonePrefixesList != null)
+            {
+                <MudComboBox @bind-Value="person.Prefix" Label="Prefix" Placeholder="Prefix" Variant="Variant.Outlined"
+                             For="@(() => person.Prefix)" Editable="true" Clearable="true" Highlight="true">
+
+                    @foreach (var prefix in phonePrefixesList)
+                    {
+                        <MudComboBoxItem Value="@prefix.Prefix">@($"{prefix.Prefix} ({prefix.CountryCode})")</MudComboBoxItem>
+                    }
+                </MudComboBox>
+            }
+        </div>
+        <div class="number-field">
+            <MudTextField T="string" @bind-Value="person.Number" Label="Phone number" Variant="Variant.Outlined" Placeholder="Enter the phone number of the person"
+            MaxLength="9" For="@(() => person.Number)" Immediate="true" ></MudTextField>
+        </div>
+        <div class="email-field">
+            <MudTextField @bind-Value="person.Email" Label="Email" Variant="Variant.Outlined" Placeholder="Enter the email of the person"
+                         For="@(() => person.Email)" Immediate="true"></MudTextField>
+        </div>
+    </MudGrid>
+</MudForm>
+    <div>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" @onclick="GoBack" Class="back-mud-button">Back</MudButton>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Save" @onclick="ValidateAndSubmit" Size="Size.Small" Class="save-mud-button">@btnText</MudButton>
+    </div>
+
+
+@code {
+    private MudForm form;
+
+    DateTime? dateOfBirth { get; set; } 
+
+    private List<PersonCreateDto> phonePrefixesList;
+
+    private RentACar.DTOs.PersonCreateDto person = new RentACar.DTOs.PersonCreateDto();
+    PersonCreateDtoFluentValidator orderValidator = new PersonCreateDtoFluentValidator();
+
+    [Parameter]
+    public int Id { get; set; }
+
+    string btnText = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        phonePrefixesList = Helper.GetPrefix();
+
+        if (Id == 0)
+        {
+            btnText = "Save new person";
+        }
+        else
+        {
+            btnText = "Update person";
+            var response = await _httpClient.GetAsync($"api/Person/{Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var personJson = await response.Content.ReadAsStringAsync();
+                person = Newtonsoft.Json.JsonConvert.DeserializeObject<RentACar.DTOs.PersonCreateDto>(personJson);
+
+                dateOfBirth = person.DateOfBirth; // pentru a pastra informatia in field
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/person");
+            }
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        if (dateOfBirth.HasValue)
+        {
+            person.DateOfBirth = dateOfBirth.Value;
+        }
+
+        HttpResponseMessage response;
+
+        if (Id == 0)
+        {
+            response = await _httpClient.PostAsJsonAsync("api/Person", person);
+        }
+        else
+        {
+            response = await _httpClient.PutAsJsonAsync($"api/Person/{Id}", person);
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        Console.WriteLine(responseContent);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var persons = await response.Content.ReadFromJsonAsync<List<PersonCreateDto>>();
+            NavigationManager.NavigateTo("/person");
+        }
+        else
+        {
+            Snackbar.Add("Error saving the person.", MudBlazor.Severity.Error);
+        }
+    }
+
+    void GoBack()
+    {
+        NavigationManager.NavigateTo("/person");
+    }
+
+    public class PersonCreateDtoFluentValidator : AbstractValidator<PersonCreateDto>
+    {
+        public PersonCreateDtoFluentValidator()
+        {
+            RuleFor(x => x.Name)
+            .NotEmpty()
+            .Length(1, 100);
+
+            RuleFor(x => x.Prefix)
+            .NotEmpty();
+
+            RuleFor(x => x.Number)
+            .NotEmpty()
+            .Length(9);
+
+            RuleFor(x => x.Email)
+            .NotEmpty()
+            .EmailAddress()
+            .MustAsync(async (value, cancellationToken) => await IsUniqueAsync(value ?? string.Empty));
+        }
+
+        private async Task<bool> IsUniqueAsync(string email)
+        {
+            return email.ToLower() != "test@test.com";
+        }
+
+        public Func<object, string, Task<IEnumerable<string>>> ValidateValue => async (person, propertyName) =>
+        {
+            var result = await ValidateAsync(ValidationContext<PersonCreateDto>.CreateWithOptions((PersonCreateDto)person, x => x.IncludeProperties(propertyName)));
+            if (result.IsValid)
+                return Array.Empty<string>();
+            return result.Errors.Select(e => e.ErrorMessage);
+        };
+    }
+
+    public async Task ValidateAndSubmit ()
+    {
+        form.Validate();
+        if (form.IsValid)
+        {
+            HandleSubmit();
+        }
+    }
+}

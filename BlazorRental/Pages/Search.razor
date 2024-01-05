@@ -1,0 +1,111 @@
+﻿@page "/search"
+@using RentACar.DTOs;
+@using MudBlazor;
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <div>
+    <MudPaper Class="paper">
+        <MudMainContent Class="content">
+            Search for the cars that are available
+            <MudGrid>
+                    <MudDatePicker @bind-Date="startDate" PickerVariant="PickerVariant.Dialog" Variant="Variant.Outlined" Placeholder="Start date" DateFormat="dd/MM/yyyy" Class="startDate"></MudDatePicker>
+                    <MudDatePicker @bind-Date="endDate" PickerVariant="PickerVariant.Dialog" Variant="Variant.Outlined" Placeholder="End date" DateFormat="dd/MM/yyyy" Class="endDate"></MudDatePicker>
+            </MudGrid>
+            <MudButton OnClick="HandleSubmit" Class="search-button">Search</MudButton>
+        </MudMainContent>
+    </MudPaper>
+    </div>
+</MudContainer>
+@if(availableCars != null)
+{
+    <div class="table">
+        <MudLayout>
+            <MudTable Items="@availableCars" Hover="true" RowClass="cursor-pointer" OnRowClick="@((TableRowClickEventArgs<CarCreateDto> args) => HandleRowClick(args))">
+                <HeaderContent>
+                    <MudTh Class="header-table">Brand</MudTh>
+                    <MudTh Class="header-table">Registration number</MudTh>
+                    <MudTh Class="header-table">Picture</MudTh>
+                    <MudTh Class="header-table">Gearbox</MudTh>
+                    <MudTh Class="header-table">Type</MudTh>
+                    <MudTh Class="header-table">Transmission</MudTh>
+                    <MudTh Class="header-table">Power</MudTh>
+                    <MudTh Class="header-table">Combustible</MudTh>
+                    <MudTh Class="header-table">Seats</MudTh>
+                    <MudTh Class="header-table">Price</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                        <MudTd DataLabel="Brand">@context.Brand</MudTd>
+                        <MudTd DataLabel="RegistrationNumber">@context.RegistrationNumber</MudTd>
+                        <MudTd DataLabel="Picture">
+                            @if (context.Picture != null)
+                            {
+                                var base64Image = Convert.ToBase64String(context.Picture);
+                                <img src="@($"data:image/jpeg;base64,{base64Image}")" alt="Car Image" style="max-width: 100px; max-height: 100px;" />
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="GearboxType">@context.GearboxType</MudTd>
+                        <MudTd DataLabel="CarType">@context.CarType</MudTd>
+                        <MudTd DataLabel="TransmissionType">@context.TransmissionType</MudTd>
+                        <MudTd DataLabel="Power">@context.Power</MudTd>
+                        <MudTd DataLabel="CumbustibleType">@context.CombustibleType</MudTd>
+                        <MudTd DataLabel="Seats">@context.Seats</MudTd>
+                        <MudTd DataLabel="Price">@context.Price</MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        </MudLayout>
+    </div>
+}
+@code {
+    DateTime? startDate { get; set; }
+    DateTime? endDate { get; set; }
+    List<CarCreateDto> availableCars { get; set; }
+    int selectedCarId {get; set;}
+    private int IdOfCar;
+
+    async Task HandleSubmit()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        if (startDate.HasValue && endDate.HasValue)
+        {
+            var response = await _httpClient.GetAsync($"api/Car/search?startDate={startDate}&endDate={endDate}");
+            if(response.IsSuccessStatusCode)
+            {
+                var carJson = await response.Content.ReadAsStringAsync();
+                availableCars = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CarCreateDto>>(carJson);
+                StateHasChanged();
+
+                await DateStorage();
+            }
+        }
+        else
+        {
+            availableCars = null;
+            StateHasChanged();
+        }
+
+    }
+
+    private async void HandleRowClick(TableRowClickEventArgs<CarCreateDto> tableRowClickEventArgs)
+    {
+        var selectedCarId = tableRowClickEventArgs.Item.Id;
+        await _localStorage.SetItemAsync("SelectedCarId", selectedCarId);
+        NavigationManager.NavigateTo($"/rental2");
+    }
+
+    private async Task DateStorage()
+    {
+        await _localStorage.SetItemAsync("SelectedStartDate", startDate);
+        await _localStorage.SetItemAsync("SelectedEndDate", endDate);
+    }
+}

@@ -1,0 +1,163 @@
+﻿@page "/car"
+@using System.Net.Http.Json
+@using System.Text.Json;
+@using RentACar.DTOs;
+@using static MudBlazor.CategoryTypes;
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+<h3>List of cars</h3>
+
+@if (Cars != null)
+{
+<div>
+        <MudLayout>
+            <MudTable Items="@Cars" Hover="true" Filter="new Func<CarCreateDto, bool>(FilterFunc1)">
+                <ToolBarContent>
+                    <MudButton Class="add-button" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" @onclick="CreateNewCar">ADD</MudButton>
+                    <MudSpacer />
+                    <div class="search-bar-version2">
+                        <MudTextField @bind-Value="searchString1" Placeholder="Search a car" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="search-bar">
+                        </MudTextField>
+                    </div>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh Class="header-table">Active</MudTh>
+                    <MudTh Class="header-table">Brand</MudTh>
+                    <MudTh Class="header-table">Registration number</MudTh>
+                    <MudTh Class="header-table">Picture</MudTh>
+                    <MudTh Class="header-table">Gearbox</MudTh>
+                    <MudTh Class="header-table">Type</MudTh>
+                    <MudTh Class="header-table">Transmission</MudTh>
+                    <MudTh Class="header-table">Power</MudTh>
+                    <MudTh Class="header-table">Combustible</MudTh>
+                    <MudTh Class="header-table">Seats</MudTh>
+                    <MudTh Class="header-table">Price</MudTh>
+                    <MudTh Class="header-table">Buttons</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudSwitch @bind-Checked="context.IsEnabled" Color="Color.Warning">
+                        </MudSwitch>
+                    </MudTd>
+                    <MudTd DataLabel="Brand">@context.Brand</MudTd>
+                    <MudTd DataLabel="RegistrationNumber">@context.RegistrationNumber</MudTd>
+                    <MudTd DataLabel="Picture">
+                        @if (context.Picture != null)
+                        {
+                            var base64Image = Convert.ToBase64String(context.Picture);
+                            <img src="@($"data:image/jpeg;base64,{base64Image}")" alt="Car Image" style="max-width: 100px; max-height: 100px;" />
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="GearboxType">@context.GearboxType</MudTd>
+                    <MudTd DataLabel="CarType">@context.CarType</MudTd>
+                    <MudTd DataLabel="TransmissionType">@context.TransmissionType</MudTd>
+                    <MudTd DataLabel="Power">@context.Power</MudTd>
+                    <MudTd DataLabel="CumbustibleType">@context.CombustibleType</MudTd>
+                    <MudTd DataLabel="Seats">@context.Seats</MudTd>
+                    <MudTd DataLabel="Price">@context.Price</MudTd>
+                    <MudTd>
+                        <div>
+                         <MudIconButton Class="edit-mud-button" Icon="@Icons.Material.Filled.Edit" aria-label="edit" @onclick="(() => UpdateCar(context.Id))"></MudIconButton>
+                         <MudIconButton Class="delete-mud-button" Icon="@Icons.Material.Filled.Delete" aria-label="delete" @onclick="( async () => await OpenDialog(context.Id))"></MudIconButton>
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        </MudLayout>
+</div>
+}
+else
+{
+<div>
+    <MudProgressCircular Style="height:70px;width:70px; margin-left: 700px; margin-top: 400px;" Indeterminate="true" />
+</div>
+}
+
+
+@code {
+    private List<bool> enabled = new List<bool>();
+    private string searchString1 = "";
+
+    private List<CarCreateDto> Cars{ get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        var response = await _httpClient.GetAsync("api/Car");
+        if (response.IsSuccessStatusCode)
+        {
+            var carJson = await response.Content.ReadAsStringAsync();
+            Cars = JsonSerializer.Deserialize<List<CarCreateDto>>(carJson);
+            enabled = Enumerable.Repeat(false, Cars.Count).ToList();
+        }
+    }
+
+    private bool FilterFunc1(CarCreateDto carCreateDto) => FilterFunc(carCreateDto, searchString1);
+
+    private bool FilterFunc(CarCreateDto carCreateDto, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (carCreateDto.Brand.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private async Task OpenDialog(int id)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("CarId", id);
+
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.ExtraSmall,
+                DisableBackdropClick = true,
+                NoHeader = true,
+                CloseOnEscapeKey = true,
+            };
+        var result = await DialogService.Show<CarList1DialogDelete>("Dialog", parameters, options).Result;
+
+        if (result != null && result.Data is bool confirmed && confirmed)
+        {
+            await DeleteCar(id);
+        }
+    }
+
+    async Task DeleteCar(int id)
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/")
+            };
+
+        var response = await _httpClient.DeleteAsync($"api/Car/{id}");
+        if (response.IsSuccessStatusCode)
+        {
+            var deletedCar = Cars.FirstOrDefault(car => car.Id == id);
+            if (deletedCar != null)
+            {
+                Cars.Remove(deletedCar);
+            }
+        }
+        NavigationManager.NavigateTo("/car");
+    }
+
+    void UpdateCar(int id)
+    {
+        NavigationManager.NavigateTo($"car2/{id}");
+    }
+
+    void CreateNewCar()
+    {
+        NavigationManager.NavigateTo("/car2");
+    }
+}

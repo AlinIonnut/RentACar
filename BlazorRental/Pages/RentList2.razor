@@ -1,0 +1,477 @@
+﻿@page "/rental2"
+@page "/rental2/{id:int}"
+@using System.Net.Http.Json
+@using System.Text;
+@using Newtonsoft.Json;
+@using RentACar.DTOs;
+@using Newtonsoft;
+@using FluentValidation;
+@using static MudBlazor.CategoryTypes;
+@inject HttpClient httpClient
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject Blazored.LocalStorage.ILocalStorageService _localStorage
+
+@if (Id == 0)
+{
+    <PageTitle>Create a new rental</PageTitle>
+    <h3>Create a new rental</h3>
+}
+else
+{
+    <PageTitle>Edit rental</PageTitle>
+    <h3>Edit rental</h3>
+}
+
+<EditForm Model="rental" OnValidSubmit="ValidateAndSubmit">
+    <div class="personid-field">
+        <MudRadioGroup  @bind-SelectedOption="@clientOption">
+            <MudRadio Option="@("NewClient")"> New Client</MudRadio>
+            <MudRadio Option="@("ExistingClient")"> Existing Client</MudRadio>
+        </MudRadioGroup>
+    </div>
+
+    @if (clientOption == "ExistingClient")
+    {
+        <div>
+            <MudForm Model="@rental" @ref="formRental2" Validation="@(orderRentalValidator.ValidateValue)" ValidationDelay="0">
+                <MudSelect @bind-Value="rental.PersonId" Variant="Variant.Outlined" Label="Existing client" Class="dropdown-field"
+                           For="@(() => rental.PersonId)" Immediate="true">
+                    @foreach (var client in existingClients)
+                    {
+                        <MudSelectItem Value="@client.Id">@client.Email</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudForm>
+
+        </div>
+    }
+
+    @if (clientOption == "NewClient")
+    {
+        <MudForm Model="@person" @ref="formPerson" Validation="@(orderPersonValidator.ValidateValue)" ValidationDelay="0">
+        <div class="name-field">
+                <MudTextField @bind-Value="person.Name" Label="Name" Variant="Variant.Outlined" Placeholder="Enter the name of the person"
+                              For="@(() => person.Name)" Immediate="true"></MudTextField>
+               
+        </div>
+        <MudGrid>
+            <div class="gender-field">
+                    <MudSelect Label="Gender Type" @bind-Value="person.GenderType" Variant="Variant.Outlined">
+                    @foreach (GenderType type in Enum.GetValues(typeof(GenderType)))
+                    {
+                        <MudSelectItem Value="type">@type.ToString()</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+            <div class="dateofbirth-field">
+                <MudDatePicker @bind-Date="dateOfBirth" Label="Date of birth" Variant="Variant.Outlined" PickerVariant="PickerVariant.Dialog" Placeholder="Enter the person date birth" OpenTo="OpenTo.Year" DateFormat="dd/MM/yyyy"></MudDatePicker>
+            </div>
+        </MudGrid>
+        <MudGrid>
+                <div class="prefix-field">
+                    @if (phonePrefixesList != null)
+                    {
+                        <MudComboBox @bind-Value="person.Prefix" Label="Prefix" Placeholder="Prefix" Variant="Variant.Outlined"
+                                     For="@(() => person.Prefix)" Editable="true" Clearable="true" Highlight="true">
+
+                            @foreach (var prefix in phonePrefixesList)
+                            {
+                                <MudComboBoxItem Value="@prefix.Prefix">@($"{prefix.Prefix} ({prefix.CountryCode})")</MudComboBoxItem>
+                            }
+                        </MudComboBox>
+                    }
+                </div>
+                <div class="number-field">
+                    <MudTextField T="string" @bind-Value="person.Number" Label="Phone number" Variant="Variant.Outlined" Placeholder="Enter the phone number of the person"
+                                  MaxLength="9" For="@(() => person.Number)" Immediate="true"></MudTextField>
+                </div>
+            <div class="email-field">
+                    <MudTextField @bind-Value="person.Email" Label="Email" Variant="Variant.Outlined" Placeholder="Enter the email of the person"
+                                  For="@(() => person.Email)" Immediate="true"></MudTextField>
+            </div>
+        </MudGrid>
+        </MudForm>
+    }
+
+    <MudForm Model="@rental" @ref="formRental" Validation="@(orderRentalValidator.ValidateValue)" ValidationDelay="0">
+        @if(IdOfCar == 0)
+        {
+            <div class="carid-field">
+                <MudSelect @bind-value="rental.CarId" Label="Choose a car" Variant="Variant.Outlined" For="@(() => rental.CarId)" Immediate="true">
+                    @foreach (var vehicle in existingCars)
+                    {
+                        <MudSelectItem Value="vehicle.Id">@vehicle.Brand  |  @vehicle.CombustibleType  |  @vehicle.GearboxType  |  @vehicle.TransmissionType </MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+        }
+        else
+        {
+            <div class="carid-else">
+                <p>@selectedCar.Brand  |  @selectedCar.CombustibleType  |  @selectedCar.GearboxType  |  @selectedCar.TransmissionType</p>
+            </div>
+
+        }
+
+        @if (startDateFromRental == null && endDateFromRental == null)
+        {
+            <MudGrid>
+                <div class="startdate-field">
+                    <MudDatePicker @bind-Date="startDate" Label="Start Date" PickerVariant="PickerVariant.Dialog" Variant="Variant.Outlined" Placeholder="dd/mm/yyyy" DateFormat="dd/MM/yyyy"></MudDatePicker>
+                </div>
+
+                <div class="enddate-field">
+                    <MudDatePicker @bind-Date="endDate" Label="End Date" PickerVariant="PickerVariant.Dialog" Variant="Variant.Outlined" Placeholder="dd/mm/yyyy" DateFormat="dd/MM/yyyy"></MudDatePicker>
+                </div>
+            </MudGrid>
+        }
+        else
+        {
+            <div class="date-else"> 
+                <p>
+                    @startDateFromRental?.ToString("dd/MM/yyyy") | @endDateFromRental?.ToString("dd/MM/yyyy")
+                </p>
+            </div>
+        }
+
+
+        <MudGrid>
+            <div class="pickuptime-field">
+                <MudTimePicker @bind-Time="pickUpTime" Variant="Variant.Outlined" PickerVariant="PickerVariant.Dialog" Label="Pickup time" Placeholder="hh:mm" />
+            </div>
+
+            <div class="dropofftime-radio">
+                <MudRadioGroup @bind-SelectedOption="@TimeOption" Class="dropofftime-text">
+                    Dropoff time: 
+                    <MudRadio Option="@("SameTime")"> Same as pickup time</MudRadio>
+                    <MudRadio Option="@("DifferentTime")">Different time</MudRadio>
+                </MudRadioGroup>
+            </div>
+
+            @if (TimeOption == "SameTime")
+            {
+                rental.DropOfTime = rental.PickUpTime;
+            }
+
+            @if (TimeOption == "DifferentTime")
+            {
+                <div class="dropofftime-field">
+                    <MudTimePicker @bind-Time="dropOffTime" Variant="Variant.Outlined" PickerVariant="PickerVariant.Dialog" Label="Dropoff time" Placeholder="hh:mm" />
+                </div>
+            }
+        </MudGrid>
+
+        <MudGrid>
+            <div class="pickuplocation-field">
+                <MudTextField @bind-Value="rental.PickUpLocation" Label="PickUpLocation" Variant="Variant.Outlined" Placeholder="Pickup car location"
+                              For="@(() => rental.PickUpLocation)" Immediate="true"></MudTextField>
+            </div>
+
+            <div class="dropofftime-radio">
+                <MudRadioGroup @bind-SelectedOption="@LocationOption" Class="dropofftime-text">
+                    Dropoff location:
+                    <MudRadio Option="@("SameLocation")"> Same as pickup location</MudRadio>
+                    <MudRadio Option="@("DifferentLocation")">Different location</MudRadio>
+                </MudRadioGroup>
+            </div>
+
+            @if (LocationOption == "SameLocation")
+            {
+                rental.DropOfLocation = rental.PickUpLocation;
+            }
+
+            @if (LocationOption == "DifferentLocation")
+            {
+              <div class="dropofflocation-field">
+                <MudTextField @bind-Value="rental.DropOfLocation" Label="DropOfLocation" Variant="Variant.Outlined" Placeholder="Dropoff car location"
+                  For="@(() => rental.DropOfLocation)" Immediate="true"></MudTextField>
+              </div>
+            }
+        </MudGrid>
+    </MudForm>
+</EditForm>
+
+    <div>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" @onclick="GoBack" Class="back-mud-button">Back</MudButton>
+        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Save" @onclick="ValidateAndSubmit" Size="Size.Small" Class="save-mud-button">@btnText</MudButton>
+    </div>
+
+@code {
+    private MudForm formRental;
+    private MudForm formRental2;
+    private MudForm formPerson;
+
+
+    DateTime? startDate { get; set; }
+    DateTime? endDate { get; set; }
+    TimeSpan? pickUpTime { get; set; }
+    TimeSpan? dropOffTime { get; set; }
+    DateTime? dateOfBirth { get; set; }
+
+    private DateTime? startDateFromRental;
+    private DateTime? endDateFromRental;
+
+    private List<PersonCreateDto> phonePrefixesList;
+    private string clientOption { get; set; }
+    private string LocationOption {get; set; }
+    private string TimeOption { get; set; }
+    private int IdOfCar;
+    private CarCreateDto selectedCar;
+    private List<PersonCreateDto> existingClients = new List<PersonCreateDto>();
+    private List<CarCreateDto> existingCars = new List<CarCreateDto>();
+    private RentACar.DTOs.RentalCreateDto rental = new RentACar.DTOs.RentalCreateDto();
+    private RentACar.DTOs.PersonCreateDto person = new RentACar.DTOs.PersonCreateDto();
+    RentalCreateDtoFluentValidator orderRentalValidator = new RentalCreateDtoFluentValidator();
+    PersonCreateDtoFluentValidator orderPersonValidator = new PersonCreateDtoFluentValidator();
+
+    [Parameter]
+    public int Id { get; set; }
+
+    string btnText = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            };
+
+        existingClients = await _httpClient.GetFromJsonAsync<List<PersonCreateDto>>("api/Person");
+        existingCars = await _httpClient.GetFromJsonAsync<List<CarCreateDto>>("api/Car");
+        phonePrefixesList = Helper.GetPrefix();
+
+        if (await _localStorage.ContainKeyAsync("SelectedCarId") && await _localStorage.ContainKeyAsync("SelectedStartDate") && await _localStorage.ContainKeyAsync("SelectedEndDate") )
+        {
+            var selectedCarId = await _localStorage.GetItemAsync<int>("SelectedCarId");
+            IdOfCar = selectedCarId;
+            var selectedStartDate = await _localStorage.GetItemAsync<DateTime>("SelectedStartDate");
+            startDateFromRental = selectedStartDate;
+            var selectedEndDate = await _localStorage.GetItemAsync<DateTime>("SelectedEndDate");
+            endDateFromRental = selectedEndDate;
+
+            selectedCar = existingCars.FirstOrDefault(car => car.Id == IdOfCar);
+
+            await _localStorage.RemoveItemAsync("SelectedCarId");
+            await _localStorage.RemoveItemAsync("SelectedStartDate");
+            await _localStorage.RemoveItemAsync("SelectedEndDate");
+        }
+
+        if (Id == 0)
+        {
+            btnText = "Save new rental";
+            clientOption = "NewClient"; // pt mudradio, sa existe valori default
+            LocationOption = "SameLocation";
+            TimeOption = "SameTime";
+        }
+        else
+        {
+            btnText = "Update rental";
+            var response = await _httpClient.GetAsync($"api/Rental/{Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var rentalJson = await response.Content.ReadAsStringAsync();
+                rental = Newtonsoft.Json.JsonConvert.DeserializeObject<RentACar.DTOs.RentalCreateDto>(rentalJson);
+                
+                clientOption = "ExistingClient"; // pt mudradio, sa existe valori default
+                LocationOption = "DifferentLocation";
+                TimeOption = "DifferentTime";
+
+                startDate = rental.StartDate; //pt a pastra valorile precedente in field 
+                endDate = rental.EndDate;
+                pickUpTime = rental.PickUpTime;
+                dropOffTime = rental.DropOfTime;
+                dateOfBirth = person.DateOfBirth;
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/rental");
+            }
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        HttpClient _httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://localhost:7111/"),
+            }; 
+
+        // handling the DateTime and TimeSpan data
+        if (startDate.HasValue)
+            rental.StartDate = startDate.Value;
+
+        if (endDate.HasValue)
+            rental.EndDate = endDate.Value;
+
+        if(pickUpTime.HasValue)
+        {
+            rental.PickUpTime = pickUpTime.Value;
+        }
+
+        if (dropOffTime.HasValue)
+        {
+            rental.DropOfTime = dropOffTime.Value;
+        }
+
+        if (dateOfBirth.HasValue)
+        {
+            person.DateOfBirth = dateOfBirth.Value;
+        }
+
+        if(IdOfCar != 0)
+        {
+            rental.CarId = selectedCar.Id;
+        }
+
+        if (startDateFromRental != null && endDateFromRental != null)
+        {
+            rental.StartDate = startDateFromRental.Value;
+            rental.EndDate = endDateFromRental.Value;
+        }
+
+        HttpResponseMessage response;
+
+        if(clientOption == "NewClient")
+        {
+            response = await _httpClient.PostAsJsonAsync("api/Person", person);
+            if (!response.IsSuccessStatusCode)
+            {
+
+                Snackbar.Add("Error creating a new person.");
+                return;
+            }
+
+            var personContent = await response.Content.ReadAsStringAsync();
+
+            var isJsonArray = personContent.StartsWith("[");
+            if (isJsonArray)
+            {
+                // Handle the case where the API returns an array
+                var persons = Newtonsoft.Json.JsonConvert.DeserializeObject<List<PersonCreateDto>>(personContent);
+                if (persons.Count > 0)
+                {
+                    rental.PersonId = persons[0].Id;
+                }
+                else
+                {
+                    Snackbar.Add("Error: Empty response from the server.");
+                    return;
+                }
+            }
+            else
+            {
+                // Handle the case where the API returns a single object
+                var newPerson = Newtonsoft.Json.JsonConvert.DeserializeObject<PersonCreateDto>(personContent);
+                rental.PersonId = newPerson.Id;
+            }
+        }
+
+        //Handle the rental output
+        if (Id == 0)
+        {
+            response = await _httpClient.PostAsJsonAsync("api/Rental", rental);
+        }
+        else
+        {
+            response = await _httpClient.PutAsJsonAsync($"api/Rental/{Id}", rental);
+        }
+        if (response.IsSuccessStatusCode)
+        {
+            var persons = await response.Content.ReadFromJsonAsync<List<RentalCreateDto>>();
+
+            NavigationManager.NavigateTo("/rental");
+        }
+        else
+        {
+            Snackbar.Add("Error saving the rental.");
+        }
+    }
+
+    void GoBack()
+    {
+        NavigationManager.NavigateTo("/rental");
+    }
+
+    public class RentalCreateDtoFluentValidator : AbstractValidator<RentalCreateDto>
+    {
+        public RentalCreateDtoFluentValidator()
+        {
+            RuleFor(x => x.PersonId)
+            .GreaterThan(0);
+
+            RuleFor(x => x.CarId)
+            .GreaterThan(0);
+
+            RuleFor(x => x.PickUpLocation)
+            .NotEmpty()
+            .Length(1, 100);
+
+            RuleFor(x => x.DropOfLocation)
+            .NotEmpty()
+            .Length(1, 100);
+        }
+
+        public Func<object, string, Task<IEnumerable<string>>> ValidateValue => async (rental, propertyName) =>
+        {
+            var result = await ValidateAsync(ValidationContext<RentalCreateDto>.CreateWithOptions((RentalCreateDto)rental, x => x.IncludeProperties(propertyName)));
+            if (result.IsValid)
+                return Array.Empty<string>();
+            return result.Errors.Select(e => e.ErrorMessage);
+        };
+    }
+
+    public class PersonCreateDtoFluentValidator : AbstractValidator<PersonCreateDto>
+    {
+        public PersonCreateDtoFluentValidator()
+        {
+            RuleFor(x => x.Name)
+            .NotEmpty()
+            .Length(1, 100);
+
+            RuleFor(x => x.Prefix)
+            .NotEmpty();
+
+            RuleFor(x => x.Number)
+            .NotEmpty()
+            .Length(9);
+
+            RuleFor(x => x.Email)
+            .NotEmpty()
+            .EmailAddress()
+            .MustAsync(async (value, cancellationToken) => await IsUniqueAsync(value ?? string.Empty));
+        }
+
+        private async Task<bool> IsUniqueAsync(string email)
+        {
+            return email.ToLower() != "test@test.com";
+        }
+
+        public Func<object, string, Task<IEnumerable<string>>> ValidateValue => async (rental, propertyName) =>
+        {
+            var result = await ValidateAsync(ValidationContext<PersonCreateDto>.CreateWithOptions((PersonCreateDto)rental, x => x.IncludeProperties(propertyName)));
+            if (result.IsValid)
+                return Array.Empty<string>();
+            return result.Errors.Select(e => e.ErrorMessage);
+        };
+    }
+
+    public async Task ValidateAndSubmit()
+    {
+        if (clientOption == "NewClient")
+        {
+            formPerson.Validate();
+        }
+
+        formRental.Validate();
+        if (clientOption == "ExistingClient")
+        {
+            formRental2.Validate();
+        }
+
+        if ((clientOption == "NewClient" && formPerson.IsValid) || (clientOption == "ExistingClient" && formRental2.IsValid) || formRental.IsValid)
+        {
+            HandleSubmit();
+        }
+    }
+}

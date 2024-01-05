@@ -1,0 +1,77 @@
+﻿::deep.name-field {
+    margin-top: 30px;
+    margin-left: -12px;
+}
+
+::deep.gender-field {
+    margin-top: 30px;
+    width: 779px;
+}
+
+::deep.dateofbirth-field {
+    margin-top: 30px;
+    margin-left: 20px;
+    width: 779px;
+}
+
+::deep .mud-theme-primary {
+    background-color: #009688 !important;
+}
+
+::deep .mud-picker-toolbar {
+    background-color: #009688 !important;
+}
+
+::deep .mud-button-outlined {
+    border: 1px solid #009688 !important;
+    color: #000000 !important;
+}
+
+::deep .mud-input-control-input-container:active {
+    border: 1px solid #000000 !important;
+}
+
+::deep .mud-primary-text {
+    color: #009688 !important;
+}
+
+::deep.prefix-field {
+    margin-top: 30px;
+    width: 200px;
+}
+
+::deep.number-field {
+    margin-left: 10px;
+    margin-top: 30px;
+    width: 569px;
+}
+
+::deep.email-field {
+    margin-top: 30px;
+    width: 779px;
+    margin-left: 20px;
+}
+
+::deep .back-mud-button {
+    margin-top: 30px;
+    margin-left: -12px;
+    background-color: #616161;
+    color: white;
+    height: 35px;
+}
+
+::deep .save-mud-button {
+    margin-top: 30px;
+    margin-left: 10px;
+    background-color: #26A69A;
+    color: white;
+    height: 35px;
+}
+
+
+::deep.email-invalid {
+    color: red;
+    font-size: 0.6em;
+    margin-left: 10px;
+    font: inherit;
+}
